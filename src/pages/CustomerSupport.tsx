@@ -1,29 +1,36 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MessageSquare, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { Modal } from '../components/Modal';
+import { useTicketStore } from '../stores/ticketStore';
+import { toast } from 'react-hot-toast';
 import type { CustomerTicket } from '../types';
 
-const tickets: CustomerTicket[] = [
-  {
-    id: '1',
-    subject: 'Payment Processing Issue',
-    description: 'Unable to process customer payment through the platform',
-    status: 'open',
-    priority: 'high',
-    createdAt: '2024-03-20T10:30:00',
-    customerEmail: 'customer@example.com'
-  },
-  {
-    id: '2',
-    subject: 'Account Access Problem',
-    description: 'Customer cannot log into their account',
-    status: 'in-progress',
-    priority: 'medium',
-    createdAt: '2024-03-19T15:45:00',
-    customerEmail: 'support@example.com'
-  }
-];
-
 export default function CustomerSupport() {
+  const { tickets, addTicket, updateTicketStatus } = useTicketStore();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newTicket, setNewTicket] = useState({
+    subject: '',
+    description: '',
+    priority: 'medium' as CustomerTicket['priority'],
+    customerEmail: '',
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    addTicket({
+      ...newTicket,
+      status: 'open',
+    });
+    setIsModalOpen(false);
+    setNewTicket({
+      subject: '',
+      description: '',
+      priority: 'medium',
+      customerEmail: '',
+    });
+    toast.success('Support ticket created successfully!');
+  };
+
   const getStatusIcon = (status: CustomerTicket['status']) => {
     switch (status) {
       case 'open': return <AlertCircle className="w-5 h-5 text-red-500" />;
@@ -44,7 +51,10 @@ export default function CustomerSupport() {
     <div>
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Customer Support</h1>
-        <button className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+        >
           <MessageSquare className="w-5 h-5 mr-2" />
           New Ticket
         </button>
@@ -75,9 +85,20 @@ export default function CustomerSupport() {
                   {getStatusIcon(ticket.status)}
                   <h3 className="ml-3 font-medium text-gray-900">{ticket.subject}</h3>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-sm font-medium ${getPriorityClass(ticket.priority)}`}>
-                  {ticket.priority}
-                </span>
+                <div className="flex items-center space-x-4">
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${getPriorityClass(ticket.priority)}`}>
+                    {ticket.priority}
+                  </span>
+                  <select
+                    value={ticket.status}
+                    onChange={(e) => updateTicketStatus(ticket.id, e.target.value as CustomerTicket['status'])}
+                    className="rounded-md border-gray-300 text-sm"
+                  >
+                    <option value="open">Open</option>
+                    <option value="in-progress">In Progress</option>
+                    <option value="resolved">Resolved</option>
+                  </select>
+                </div>
               </div>
               <p className="text-gray-600 mb-4">{ticket.description}</p>
               <div className="flex items-center text-sm text-gray-500">
@@ -89,6 +110,88 @@ export default function CustomerSupport() {
           ))}
         </div>
       </div>
+
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Create New Support Ticket"
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="subject" className="block text-sm font-medium text-gray-700">
+              Subject
+            </label>
+            <input
+              type="text"
+              id="subject"
+              value={newTicket.subject}
+              onChange={(e) => setNewTicket({ ...newTicket, subject: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              required
+            />
+          </div>
+
+          <div>
+            <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+              Description
+            </label>
+            <textarea
+              id="description"
+              value={newTicket.description}
+              onChange={(e) => setNewTicket({ ...newTicket, description: e.target.value })}
+              rows={4}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              required
+            />
+          </div>
+
+          <div>
+            <label htmlFor="priority" className="block text-sm font-medium text-gray-700">
+              Priority
+            </label>
+            <select
+              id="priority"
+              value={newTicket.priority}
+              onChange={(e) => setNewTicket({ ...newTicket, priority: e.target.value as CustomerTicket['priority'] })}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            >
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              Customer Email
+            </label>
+            <input
+              type="email"
+              id="email"
+              value={newTicket.customerEmail}
+              onChange={(e) => setNewTicket({ ...newTicket, customerEmail: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              required
+            />
+          </div>
+
+          <div className="flex justify-end space-x-3 pt-4">
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(false)}
+              className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-md"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md"
+            >
+              Create Ticket
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
